@@ -118,10 +118,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const addDebt = async (debtData: Omit<Debt, 'id' | 'dueDate'> & {dueDate?: Date}) => {
         if (!user) throw new Error("User not authenticated");
-        const dataToAdd: any = { ...debtData };
-        if (debtData.dueDate) {
-            dataToAdd.dueDate = firebase.firestore.Timestamp.fromDate(debtData.dueDate);
+
+        const { dueDate, ...restOfData } = debtData;
+        const dataToAdd: { [key: string]: any } = { ...restOfData };
+        
+        if (dueDate) {
+            dataToAdd.dueDate = firebase.firestore.Timestamp.fromDate(dueDate);
         }
+        
         await db.collection('users').doc(user.uid).collection('debts').add(dataToAdd);
     };
 
