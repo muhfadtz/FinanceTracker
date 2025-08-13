@@ -79,7 +79,7 @@ export const translations = {
     payable: "Payable (I Owe)",
     receivable: "Receivable (Owed to Me)",
     person: "Person",
-    personPlaceholder: "e.g., Budi",
+    personPlaceholder: "e.g., John Doe",
     amount: "Amount",
     dueDateOptional: "Due Date (Optional)",
     expenseChart: "Expense Chart",
@@ -87,6 +87,10 @@ export const translations = {
     daily: "Daily",
     noChartData: "No expense data for this period.",
     selectMonth: "Select month",
+    markAsPaid: "Mark as paid",
+    markAsUnpaid: "Mark as unpaid",
+    deleteDebt: "Delete debt record",
+    confirmDeleteDebt: "Are you sure you want to delete this debt record?",
 
     // Services
     featureServices: "Feature Services",
@@ -221,6 +225,10 @@ export const translations = {
     daily: "Harian",
     noChartData: "Tidak ada data pengeluaran untuk periode ini.",
     selectMonth: "Pilih bulan",
+    markAsPaid: "Tandai lunas",
+    markAsUnpaid: "Batal tandai lunas",
+    deleteDebt: "Hapus catatan utang",
+    confirmDeleteDebt: "Apakah Anda yakin ingin menghapus catatan utang ini?",
 
     // Services
     featureServices: "Fitur Layanan",
