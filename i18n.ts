@@ -51,7 +51,7 @@ export const translations = {
     walletNamePlaceholder: "Wallet Name (e.g., Savings)",
     initialBalance: "Initial Balance (Optional)",
     
-    // Profile
+    // Profile & Goals
     profile: "Profile",
     editProfile: "Edit Profile",
     chooseAvatar: "Choose Your Avatar",
@@ -64,6 +64,15 @@ export const translations = {
     receivables: "Receivables",
     yourGoals: "Your Goals",
     addGoal: "Add Goal",
+    editGoal: "Edit Goal",
+    deleteGoal: "Delete Goal",
+    confirmDeleteGoal: "Are you sure you want to delete this goal? This action cannot be undone.",
+    goalContribution: "Goal Contribution",
+    addFunds: "Add Funds",
+    addFundsToGoalTitle: "Add Funds to {goalName}",
+    amountToAdd: "Amount to Add",
+    sourceWallet: "Source Wallet",
+    errorInsufficientFundsForGoal: "The selected wallet has insufficient funds.",
     debtManagement: "Debt Management",
     iOwe: "I Owe",
     owedToMe: "Owed to Me",
@@ -189,7 +198,7 @@ export const translations = {
     walletNamePlaceholder: "Nama Dompet (cth., Tabungan)",
     initialBalance: "Saldo Awal (Opsional)",
     
-    // Profile
+    // Profile & Goals
     profile: "Profil",
     editProfile: "Edit Profil",
     chooseAvatar: "Pilih Avatar Anda",
@@ -202,6 +211,15 @@ export const translations = {
     receivables: "Piutang",
     yourGoals: "Target Anda",
     addGoal: "Tambah Target",
+    editGoal: "Edit Target",
+    deleteGoal: "Hapus Target",
+    confirmDeleteGoal: "Apakah Anda yakin ingin menghapus target ini? Tindakan ini tidak dapat dibatalkan.",
+    goalContribution: "Kontribusi Target",
+    addFunds: "Tambah Dana",
+    addFundsToGoalTitle: "Tambah Dana ke {goalName}",
+    amountToAdd: "Jumlah Dana",
+    sourceWallet: "Sumber Dompet",
+    errorInsufficientFundsForGoal: "Saldo di dompet yang dipilih tidak mencukupi.",
     debtManagement: "Manajemen Hutang",
     iOwe: "Saya Berhutang",
     owedToMe: "Piutang Saya",
