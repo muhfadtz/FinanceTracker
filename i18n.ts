@@ -82,6 +82,11 @@ export const translations = {
     personPlaceholder: "e.g., Budi",
     amount: "Amount",
     dueDateOptional: "Due Date (Optional)",
+    expenseChart: "Expense Chart",
+    monthly: "Monthly",
+    daily: "Daily",
+    noChartData: "No expense data for this period.",
+    selectMonth: "Select month",
 
     // Services
     featureServices: "Feature Services",
@@ -95,7 +100,7 @@ export const translations = {
     amountLabel: "Amount",
     date: "Date",
     category: "Category",
-    categoryPlaceholder: "Choose Category",
+    categoryPlaceholder: "Select Category",
     wallet: "Wallet",
     noWallet: "No wallet available",
     descriptionOptional: "Description (Optional)",
@@ -103,6 +108,21 @@ export const translations = {
     errorRequired: "Please fill all required fields.",
     errorInsufficientFunds: "Insufficient balance for this expense.",
     errorAddTransaction: "An error occurred while adding the transaction.",
+
+    // Categories
+    food: "Food & Drinks",
+    transportation: "Transportation",
+    shopping: "Shopping",
+    bills: "Bills & Utilities",
+    entertainment: "Entertainment",
+    health: "Health",
+    education: "Education",
+    otherExpense: "Others",
+    salary: "Salary",
+    bonus: "Bonus",
+    gift: "Gift",
+    investment: "Investment",
+    otherIncome: "Others",
 
     // Settings
     settings: "Settings",
@@ -196,6 +216,11 @@ export const translations = {
     personPlaceholder: "cth., Budi",
     amount: "Jumlah",
     dueDateOptional: "Tanggal Jatuh Tempo (Opsional)",
+    expenseChart: "Grafik Pengeluaran",
+    monthly: "Bulanan",
+    daily: "Harian",
+    noChartData: "Tidak ada data pengeluaran untuk periode ini.",
+    selectMonth: "Pilih bulan",
 
     // Services
     featureServices: "Fitur Layanan",
@@ -217,6 +242,21 @@ export const translations = {
     errorRequired: "Harap isi semua kolom yang wajib diisi.",
     errorInsufficientFunds: "Saldo tidak mencukupi untuk pengeluaran ini.",
     errorAddTransaction: "Terjadi kesalahan saat menambahkan transaksi.",
+    
+    // Categories
+    food: "Makanan & Minuman",
+    transportation: "Transportasi",
+    shopping: "Belanja",
+    bills: "Tagihan & Utilitas",
+    entertainment: "Hiburan",
+    health: "Kesehatan",
+    education: "Pendidikan",
+    otherExpense: "Lainnya",
+    salary: "Gaji",
+    bonus: "Bonus",
+    gift: "Hadiah",
+    investment: "Investasi",
+    otherIncome: "Lainnya",
 
     // Settings
     settings: "Pengaturan",
