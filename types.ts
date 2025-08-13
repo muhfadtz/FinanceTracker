@@ -43,4 +43,5 @@ export interface Debt {
   person: string;
   amount: number;
   dueDate?: firebase.firestore.Timestamp;
+  status: 'unpaid' | 'paid';
 }
