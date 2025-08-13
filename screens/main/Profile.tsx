@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useSettings } from '../../context/SettingsContext';
-import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon } from '../../components/Icons';
+import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, CalendarIcon } from '../../components/Icons';
 import { formatDate } from '../../utils/helpers';
 import { Spinner } from '../../components/Spinner';
-import { Goal, Debt } from '../../types';
+import { Goal, Debt, Transaction } from '../../types';
 
 
 // --- In-file Component: AvatarSelectionModal ---
@@ -268,10 +268,139 @@ const DebtItem = ({ debt }: { debt: Debt }) => {
     );
 };
 
+// --- In-file Component: Bar Chart for expenses ---
+const Bar = ({ value, maxValue, label, formatCurrency }: { value: number; maxValue: number; label: string; formatCurrency: (v: number) => string }) => {
+    const barHeight = maxValue > 0 ? (value / maxValue) * 100 : 0;
+    
+    return (
+        <div className="flex-1 flex flex-col items-center gap-2 group relative h-full justify-end">
+            <div className="absolute -top-8 hidden group-hover:block bg-gray-700 dark:bg-gray-600 text-white text-xs rounded py-1 px-2 z-10 whitespace-nowrap">
+                {formatCurrency(value)}
+            </div>
+            <div 
+                className="w-full bg-evvo-green-dark hover:bg-evvo-green-medium rounded-t-md transition-all"
+                style={{ height: `${barHeight}%` }}
+            ></div>
+            <span className="text-xs text-center text-gray-500 dark:text-gray-400">{label}</span>
+        </div>
+    );
+}
+
+const BarChart = ({ data, formatCurrency }: { data: { label: string, value: number }[], formatCurrency: (v: number) => string}) => {
+    const maxValue = Math.max(0, ...data.map(d => d.value));
+
+    return (
+        <div className="h-52 flex items-end justify-around gap-1 p-2 border-t border-gray-100 dark:border-gray-700">
+            {data.map(item => (
+                <Bar key={item.label} value={item.value} maxValue={maxValue} label={item.label} formatCurrency={formatCurrency} />
+            ))}
+        </div>
+    );
+}
+
+const FinancialChart = ({ transactions }: { transactions: Transaction[] }) => {
+    const { t, formatCurrency, language } = useSettings();
+    const [view, setView] = useState<'monthly' | 'daily'>('monthly');
+    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+
+    const expenseTransactions = transactions.filter(tx => tx.type === 'expense');
+
+    const chartData = useMemo(() => {
+        if (view === 'monthly') {
+            const monthlyExpenses: { [key: string]: number } = {};
+            expenseTransactions.forEach(tx => {
+                const monthKey = tx.date.toDate().toISOString().slice(0, 7); // YYYY-MM
+                monthlyExpenses[monthKey] = (monthlyExpenses[monthKey] || 0) + tx.amount;
+            });
+            
+            const sortedMonths = Object.keys(monthlyExpenses).sort().slice(-6);
+            
+            return sortedMonths.map(monthKey => {
+                const date = new Date(monthKey + '-15T12:00:00Z');
+                return {
+                    label: date.toLocaleDateString(language, { month: 'short', timeZone: 'UTC' }),
+                    value: monthlyExpenses[monthKey],
+                };
+            });
+        } else { // daily view
+            const dailyExpenses: { [key: number]: number } = {};
+            expenseTransactions
+                .filter(tx => tx.date.toDate().toISOString().slice(0, 7) === selectedMonth)
+                .forEach(tx => {
+                    const day = tx.date.toDate().getDate();
+                    dailyExpenses[day] = (dailyExpenses[day] || 0) + tx.amount;
+                });
+            
+            return Object.keys(dailyExpenses)
+                .map(Number)
+                .sort((a, b) => a - b)
+                .map(day => ({
+                    label: String(day),
+                    value: dailyExpenses[day],
+                }));
+        }
+    }, [expenseTransactions, view, selectedMonth, language]);
+
+    const formattedSelectedMonth = useMemo(() => {
+        if (!selectedMonth) return '';
+        // Use a specific day and UTC to avoid timezone issues with month boundaries
+        const date = new Date(selectedMonth + '-15T12:00:00Z'); 
+        return date.toLocaleDateString(language, {
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC'
+        });
+    }, [selectedMonth, language]);
+
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm">
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">{t('expenseChart')}</h3>
+            <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1">
+                    <div className="flex border border-gray-200 dark:border-gray-700 rounded-lg p-1 bg-gray-100 dark:bg-gray-900">
+                        <button onClick={() => setView('monthly')} className={`w-1/2 p-2 text-sm rounded-md font-semibold transition-colors ${view === 'monthly' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {t('monthly')}
+                        </button>
+                         <button onClick={() => setView('daily')} className={`w-1/2 p-2 text-sm rounded-md font-semibold transition-colors ${view === 'daily' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {t('daily')}
+                        </button>
+                    </div>
+                </div>
+                 {view === 'daily' && (
+                    <div className="relative">
+                         <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            aria-label={t('selectMonth')}
+                        />
+                        <div 
+                            className="flex items-center justify-between gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-sm pointer-events-none w-44"
+                            aria-hidden="true"
+                        >
+                            <span>{formattedSelectedMonth}</span>
+                            <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {chartData.length > 0 ? (
+                <BarChart data={chartData} formatCurrency={formatCurrency} />
+            ) : (
+                <div className="h-52 flex items-center justify-center text-center text-gray-500 dark:text-gray-400 p-2 border-t border-gray-100 dark:border-gray-700">
+                    <p>{t('noChartData')}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void }) => {
   const { userProfile, updateUserProfile } = useAuth();
-  const { wallets, goals, debts, addGoal, addDebt } = useData();
+  const { wallets, goals, debts, addGoal, addDebt, transactions } = useData();
   const { t, formatCurrency } = useSettings();
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddDebtModalOpen, setAddDebtModalOpen] = useState(false);
@@ -355,6 +484,10 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
                 <FinancialSummaryItem label={t('receivables')} value={formatCurrency(myReceivables)} />
             </div>
         </div>
+      </section>
+
+      <section className="mb-6">
+          <FinancialChart transactions={transactions} />
       </section>
 
       <section className="mb-6">
