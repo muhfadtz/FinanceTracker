@@ -1,0 +1,5 @@
+{
+  "name": "evvoFinanceBaru",
+  "description": "A modern personal finance management web application to track income, expenses, and manage wallets with real-time data synchronization using Firebase.",
+  "requestFramePermissions": []
+}

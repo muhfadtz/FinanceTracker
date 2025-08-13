@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>evvoFinance</title>
+    <!-- Tailwind CSS CDN for rapid prototyping -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for UI consistency -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Custom Tailwind theme to match Figma design palette
+      tailwind.config = {
+        darkMode: 'class', // Enable dark mode using a class
+        theme: {
+          extend: {
+            fontFamily: {
+                sans: ['Poppins', 'sans-serif'],
+            },
+            colors: {
+              'evvo-green': {
+                dark: '#1A4331',
+                medium: '#2A6A4E',
+                light: '#D4F4DD',
+                DEFAULT: '#1A4331',
+              },
+              'evvo-gray': {
+                light: '#F3F4F6',
+                DEFAULT: '#E5E7EB',
+                dark: '#6B7280',
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react": "https://esm.sh/react@18.2.0",
+    "firebase/app": "https://esm.sh/firebase@9.22.1/app",
+    "firebase/auth": "https://esm.sh/firebase@9.22.1/auth",
+    "firebase/firestore": "https://esm.sh/firebase@9.22.1/firestore",
+    "firebase/": "https://esm.sh/firebase@^12.1.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
