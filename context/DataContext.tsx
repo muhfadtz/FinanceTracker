@@ -20,6 +20,9 @@ interface DataContextType {
     updateWalletOrder: (reorderedWallets: Wallet[]) => Promise<void>;
     toggleDebtStatus: (debtId: string, currentStatus: 'unpaid' | 'paid') => Promise<void>;
     deleteDebt: (debtId: string) => Promise<void>;
+    updateGoal: (data: { goalId: string; name: string; targetAmount: number; }) => Promise<void>;
+    deleteGoal: (goalId: string) => Promise<void>;
+    addFundsToGoal: (data: { goalId: string; walletId: string; amount: number; categoryLabel: string; description: string; }) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -186,8 +189,64 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         await db.collection('users').doc(user.uid).collection('debts').doc(debtId).delete();
     };
 
+    const updateGoal = async (data: { goalId: string; name: string; targetAmount: number }) => {
+        if (!user) throw new Error("User not authenticated");
+        const { goalId, name, targetAmount } = data;
+        const goalRef = db.collection('users').doc(user.uid).collection('goals').doc(goalId);
+        await goalRef.update({ name, targetAmount });
+    };
 
-    const value = { wallets, transactions, goals, debts, loading, addTransaction, addWallet, addGoal, addDebt, updateWallet, deleteWallet, updateWalletOrder, toggleDebtStatus, deleteDebt };
+    const deleteGoal = async (goalId: string) => {
+        if (!user) throw new Error("User not authenticated");
+        await db.collection('users').doc(user.uid).collection('goals').doc(goalId).delete();
+    };
+
+    const addFundsToGoal = async (data: { goalId: string; walletId: string; amount: number; categoryLabel: string; description: string; }) => {
+        if (!user) throw new Error("User not authenticated");
+        const { goalId, walletId, amount, categoryLabel, description } = data;
+
+        if (amount <= 0) throw new Error("Amount must be positive.");
+
+        await db.runTransaction(async (transaction) => {
+            const walletRef = db.collection('users').doc(user.uid).collection('wallets').doc(walletId);
+            const goalRef = db.collection('users').doc(user.uid).collection('goals').doc(goalId);
+
+            const [walletDoc, goalDoc] = await Promise.all([
+                transaction.get(walletRef),
+                transaction.get(goalRef)
+            ]);
+
+            if (!walletDoc.exists) throw new Error("Wallet not found.");
+            if (!goalDoc.exists) throw new Error("Goal not found.");
+
+            const walletData = walletDoc.data() as Wallet;
+            const goalData = goalDoc.data() as Goal;
+
+            if (walletData.balance < amount) {
+                throw new Error("Insufficient funds in the selected wallet.");
+            }
+
+            const newWalletBalance = walletData.balance - amount;
+            const newGoalAmount = goalData.currentAmount + amount;
+
+            transaction.update(walletRef, { balance: newWalletBalance });
+            transaction.update(goalRef, { currentAmount: newGoalAmount });
+
+            const newTransactionRef = db.collection('users').doc(user.uid).collection('transactions').doc();
+            const newTransactionData: Omit<Transaction, 'id'> = {
+                type: 'expense',
+                amount,
+                category: categoryLabel,
+                date: firebase.firestore.Timestamp.now(),
+                walletId,
+                walletName: walletData.name,
+                description: description
+            };
+            transaction.set(newTransactionRef, newTransactionData);
+        });
+    };
+
+    const value = { wallets, transactions, goals, debts, loading, addTransaction, addWallet, addGoal, addDebt, updateWallet, deleteWallet, updateWalletOrder, toggleDebtStatus, deleteDebt, updateGoal, deleteGoal, addFundsToGoal };
 
     return (
         <DataContext.Provider value={value}>
