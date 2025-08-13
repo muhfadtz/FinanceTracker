@@ -14,10 +14,12 @@ interface DataContextType {
     addTransaction: (transactionData: Omit<Transaction, 'id' | 'walletName' | 'date'> & { date: Date, description?: string }) => Promise<void>;
     addWallet: (walletData: Omit<Wallet, 'id' | 'order'>) => Promise<void>;
     addGoal: (goalData: Omit<Goal, 'id' | 'currentAmount'>) => Promise<void>;
-    addDebt: (debtData: Omit<Debt, 'id' | 'dueDate'> & { dueDate?: Date }) => Promise<void>;
+    addDebt: (debtData: Omit<Debt, 'id' | 'status' | 'dueDate'> & { dueDate?: Date }) => Promise<void>;
     updateWallet: (walletData: Pick<Wallet, 'id' | 'name' | 'icon' | 'balance'>) => Promise<void>;
     deleteWallet: (walletId: string) => Promise<void>;
     updateWalletOrder: (reorderedWallets: Wallet[]) => Promise<void>;
+    toggleDebtStatus: (debtId: string, currentStatus: 'unpaid' | 'paid') => Promise<void>;
+    deleteDebt: (debtId: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -116,11 +118,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         await db.collection('users').doc(user.uid).collection('goals').add({ ...goalData, currentAmount: 0 });
     };
 
-    const addDebt = async (debtData: Omit<Debt, 'id' | 'dueDate'> & {dueDate?: Date}) => {
+    const addDebt = async (debtData: Omit<Debt, 'id' | 'status' | 'dueDate'> & {dueDate?: Date}) => {
         if (!user) throw new Error("User not authenticated");
 
         const { dueDate, ...restOfData } = debtData;
-        const dataToAdd: { [key: string]: any } = { ...restOfData };
+        const dataToAdd: { [key: string]: any } = { 
+            ...restOfData,
+            status: 'unpaid',
+        };
         
         if (dueDate) {
             dataToAdd.dueDate = firebase.firestore.Timestamp.fromDate(dueDate);
@@ -168,8 +173,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         await batch.commit();
     };
+    
+    const toggleDebtStatus = async (debtId: string, currentStatus: 'unpaid' | 'paid') => {
+        if (!user) throw new Error("User not authenticated");
+        const newStatus = currentStatus === 'unpaid' ? 'paid' : 'unpaid';
+        const debtRef = db.collection('users').doc(user.uid).collection('debts').doc(debtId);
+        await debtRef.update({ status: newStatus });
+    };
 
-    const value = { wallets, transactions, goals, debts, loading, addTransaction, addWallet, addGoal, addDebt, updateWallet, deleteWallet, updateWalletOrder };
+    const deleteDebt = async (debtId: string) => {
+        if (!user) throw new Error("User not authenticated");
+        await db.collection('users').doc(user.uid).collection('debts').doc(debtId).delete();
+    };
+
+
+    const value = { wallets, transactions, goals, debts, loading, addTransaction, addWallet, addGoal, addDebt, updateWallet, deleteWallet, updateWalletOrder, toggleDebtStatus, deleteDebt };
 
     return (
         <DataContext.Provider value={value}>
