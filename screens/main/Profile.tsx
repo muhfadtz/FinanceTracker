@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useSettings } from '../../context/SettingsContext';
-import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, CalendarIcon, CheckIcon, TrashIcon } from '../../components/Icons';
+import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, CalendarIcon, CheckIcon, TrashIcon, PlusCircleIcon } from '../../components/Icons';
 import { formatDate } from '../../utils/helpers';
 import { Spinner } from '../../components/Spinner';
-import { Goal, Debt, Transaction } from '../../types';
+import { Goal, Debt, Transaction, Wallet } from '../../types';
 
 
 // --- In-file Component: AvatarSelectionModal ---
@@ -182,6 +182,158 @@ const AddGoalModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
                 </div>
             </div>
              <style>{`.animate-scale-in{animation:scale-in .3s cubic-bezier(.25,.46,.45,.94) forwards}@keyframes scale-in{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+        </div>
+    );
+};
+
+const EditGoalModal = ({ isOpen, onClose, onSave, goal }: { isOpen: boolean; onClose: () => void; onSave: (data: { goalId: string; name: string; targetAmount: number }) => void; goal: Goal | null }) => {
+    const { t } = useSettings();
+    const [name, setName] = useState('');
+    const [targetAmount, setTargetAmount] = useState('');
+
+    useEffect(() => {
+        if (goal) {
+            setName(goal.name);
+            setTargetAmount(String(goal.targetAmount));
+        }
+    }, [goal]);
+
+    if (!isOpen || !goal) return null;
+
+    const handleSave = () => {
+        if (name && targetAmount) {
+            onSave({ goalId: goal.id, name, targetAmount: parseFloat(targetAmount) });
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm animate-scale-in">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">{t('editGoal')}</h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-gray-600 dark:text-gray-300 text-sm font-medium mb-1" htmlFor="edit-goal-name">{t('goalName')}</label>
+                        <input id="edit-goal-name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder={t('goalNamePlaceholder')}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-evvo-green-dark bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                    <div>
+                        <label className="block text-gray-600 dark:text-gray-300 text-sm font-medium mb-1" htmlFor="edit-goal-target">{t('targetAmount')}</label>
+                        <input id="edit-goal-target" type="number" value={targetAmount} onChange={e => setTargetAmount(e.target.value)} placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-evvo-green-dark bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                    </div>
+                </div>
+                <div className="flex gap-4 mt-8">
+                    <button onClick={onClose} className="w-full py-3 rounded-lg bg-gray-200 text-gray-700 font-bold hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">{t('cancel')}</button>
+                    <button onClick={handleSave} className="w-full py-3 rounded-lg bg-evvo-green-dark text-white font-bold hover:bg-evvo-green-medium">{t('save')}</button>
+                </div>
+            </div>
+            <style>{`.animate-scale-in{animation:scale-in .3s cubic-bezier(.25,.46,.45,.94) forwards}@keyframes scale-in{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+        </div>
+    );
+};
+
+const AddFundsToGoalModal = ({ isOpen, onClose, onAddFunds, goal, wallets }: { isOpen: boolean; onClose: () => void; onAddFunds: (data: { goalId: string; walletId: string; amount: number; categoryLabel: string; description: string; }) => Promise<void>; goal: Goal | null; wallets: Wallet[] }) => {
+    const { t, formatCurrency } = useSettings();
+    const [amount, setAmount] = useState('');
+    const [walletId, setWalletId] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (wallets.length > 0) {
+            setWalletId(wallets[0].id);
+        }
+    }, [wallets]);
+    
+    useEffect(() => {
+        // Reset state when modal is opened/closed or goal changes
+        setAmount('');
+        setError('');
+        setIsLoading(false);
+        if (wallets.length > 0) {
+            setWalletId(wallets[0].id);
+        }
+    }, [isOpen, goal, wallets]);
+
+    if (!isOpen || !goal) return null;
+
+    const handleAdd = async () => {
+        const parsedAmount = parseFloat(amount);
+        if (!parsedAmount || parsedAmount <= 0) {
+            setError(t('errorRequired'));
+            return;
+        }
+
+        const selectedWallet = wallets.find(w => w.id === walletId);
+        if (!selectedWallet) {
+            setError(t('noWallet'));
+            return;
+        }
+
+        if (selectedWallet.balance < parsedAmount) {
+            setError(t('errorInsufficientFundsForGoal'));
+            return;
+        }
+
+        setError('');
+        setIsLoading(true);
+
+        try {
+            await onAddFunds({
+                goalId: goal.id,
+                walletId: walletId,
+                amount: parsedAmount,
+                categoryLabel: t('goalContribution'),
+                description: `${t('goalContribution')}: ${goal.name}`
+            });
+            onClose();
+        } catch (err: any) {
+            console.error("Failed to add funds to goal", err);
+            setError(err.message || "An unexpected error occurred.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const remainingNeeded = goal.targetAmount - goal.currentAmount;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm animate-scale-in">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">{t('addFunds')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('addFundsToGoalTitle').replace('{goalName}', goal.name)}</p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-gray-600 dark:text-gray-300 text-sm font-medium mb-1" htmlFor="fund-amount">{t('amountToAdd')}</label>
+                        <input id="fund-amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-evvo-green-dark bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                        {remainingNeeded > 0 && <p className="text-xs text-gray-400 mt-1">{`Still needed: ${formatCurrency(remainingNeeded)}`}</p>}
+                    </div>
+                     <div>
+                        <label className="block text-gray-600 dark:text-gray-300 text-sm font-medium mb-1" htmlFor="fund-wallet">{t('sourceWallet')}</label>
+                        <select id="fund-wallet" value={walletId} onChange={e => setWalletId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-evvo-green-dark bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            {wallets.length > 0 ? (
+                                wallets.map(w => <option key={w.id} value={w.id}>{`${w.name} (${formatCurrency(w.balance)})`}</option>)
+                            ) : (
+                                <option disabled>{t('noWallet')}</option>
+                            )}
+                        </select>
+                    </div>
+                </div>
+
+                {error && <p className="text-red-500 text-sm mt-4 text-center bg-red-100 dark:bg-red-500/20 p-2 rounded-lg">{error}</p>}
+                
+                <div className="flex gap-4 mt-8">
+                    <button onClick={onClose} className="w-full py-3 rounded-lg bg-gray-200 text-gray-700 font-bold hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">{t('cancel')}</button>
+                    <button onClick={handleAdd} disabled={isLoading || !walletId} className="w-full py-3 rounded-lg bg-evvo-green-dark text-white font-bold hover:bg-evvo-green-medium flex justify-center items-center disabled:opacity-50">
+                        {isLoading ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div> : t('addFunds')}
+                    </button>
+                </div>
+            </div>
+            <style>{`.animate-scale-in{animation:scale-in .3s cubic-bezier(.25,.46,.45,.94) forwards}@keyframes scale-in{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
         </div>
     );
 };
@@ -416,17 +568,54 @@ const FinancialChart = ({ transactions }: { transactions: Transaction[] }) => {
     );
 };
 
+const GoalItem = ({ goal, onAddFunds, onEdit, onDelete }: { goal: Goal, onAddFunds: (goal: Goal) => void, onEdit: (goal: Goal) => void, onDelete: (goalId: string) => void }) => {
+    const { t, formatCurrency } = useSettings();
+    const progress = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+
+    return (
+        <div className="flex-shrink-0 w-64 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
+            <div>
+                <div className="flex justify-between items-start mb-1">
+                    <p className="font-bold text-gray-800 dark:text-gray-100 break-words w-4/5">{goal.name}</p>
+                    <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
+                        <button onClick={() => onEdit(goal)} className="hover:text-gray-700 dark:hover:text-gray-300" aria-label={t('editGoal')}>
+                            <EditIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => onDelete(goal.id)} className="hover:text-red-500" aria-label={t('deleteGoal')}>
+                            <TrashIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{`${formatCurrency(goal.currentAmount)} / ${formatCurrency(goal.targetAmount)}`}</p>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 my-2">
+                    <div className="bg-evvo-green-dark h-2 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
+                </div>
+            </div>
+            <button
+                onClick={() => onAddFunds(goal)}
+                className="mt-3 w-full py-2 rounded-lg bg-evvo-green-light text-evvo-green-dark dark:bg-evvo-green-dark/50 dark:text-evvo-green-light font-bold hover:opacity-80 transition-opacity text-sm flex items-center justify-center gap-2"
+            >
+                <PlusCircleIcon className="w-5 h-5" />
+                <span>{t('addFunds')}</span>
+            </button>
+        </div>
+    );
+};
+
 
 const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void }) => {
   const { userProfile, updateUserProfile } = useAuth();
-  const { wallets, goals, debts, addGoal, addDebt, transactions, toggleDebtStatus, deleteDebt } = useData();
+  const { wallets, goals, debts, addGoal, addDebt, transactions, toggleDebtStatus, deleteDebt, updateGoal, deleteGoal, addFundsToGoal } = useData();
   const { t, formatCurrency } = useSettings();
+
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddDebtModalOpen, setAddDebtModalOpen] = useState(false);
   const [isEditProfileModalOpen, setEditProfileModalOpen] = useState(false);
   const [isAvatarModalOpen, setAvatarModalOpen] = useState(false);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
-
+  
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [fundingGoal, setFundingGoal] = useState<Goal | null>(null);
 
   if (!userProfile) {
     return <div className="h-screen flex items-center justify-center"><Spinner /></div>;
@@ -444,22 +633,29 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
     }
   };
 
-    const handleToggleDebtStatus = (debtId: string, currentStatus: 'unpaid' | 'paid') => {
-        toggleDebtStatus(debtId, currentStatus);
-    };
+  const handleToggleDebtStatus = (debtId: string, currentStatus: 'unpaid' | 'paid') => {
+      toggleDebtStatus(debtId, currentStatus);
+  };
 
-    const handleDeleteDebt = (debtId: string) => {
-        if (window.confirm(t('confirmDeleteDebt'))) {
-            deleteDebt(debtId);
-        }
-    };
+  const handleDeleteDebt = (debtId: string) => {
+      if (window.confirm(t('confirmDeleteDebt'))) {
+          deleteDebt(debtId);
+      }
+  };
+  
+  const handleDeleteGoal = (goalId: string) => {
+      if (window.confirm(t('confirmDeleteGoal'))) {
+          deleteGoal(goalId);
+      }
+  };
 
-    const sortedDebts = useMemo(() => {
-        return [...debts].sort((a, b) => {
-            if (a.status === b.status) return 0;
-            return a.status === 'paid' ? 1 : -1; // Unpaid first
-        });
-    }, [debts]);
+
+  const sortedDebts = useMemo(() => {
+      return [...debts].sort((a, b) => {
+          if (a.status === b.status) return 0;
+          return a.status === 'paid' ? 1 : -1; // Unpaid first
+      });
+  }, [debts]);
 
   const totalBalance = wallets.reduce((acc, w) => acc + w.balance, 0);
   const targetProgress = goals.reduce((acc, g) => acc + g.currentAmount, 0);
@@ -530,13 +726,13 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
          <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-3">{t('yourGoals')}</h3>
          <div className="flex gap-4 overflow-x-auto pb-2 -mx-6 px-6">
             {goals.map(goal => (
-                 <div key={goal.id} className="flex-shrink-0 w-40 bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-dashed border-gray-200 dark:border-gray-700">
-                    <p className="font-bold text-sm mb-1 text-gray-800 dark:text-gray-100">{goal.name}</p>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
-                        <div className="bg-evvo-green-dark h-1.5 rounded-full" style={{width: `${(goal.currentAmount / goal.targetAmount) * 100}%`}}></div>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</p>
-                 </div>
+                 <GoalItem
+                    key={goal.id}
+                    goal={goal}
+                    onAddFunds={setFundingGoal}
+                    onEdit={setEditingGoal}
+                    onDelete={handleDeleteGoal}
+                 />
             ))}
             <button onClick={() => setAddGoalModalOpen(true)} className="flex-shrink-0 w-28 bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-gray-400 hover:border-evvo-green-dark hover:text-evvo-green-dark transition-colors">
                 <PlusIcon className="w-6 h-6 mb-1"/>
@@ -586,6 +782,8 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
     <AddDebtModal isOpen={isAddDebtModalOpen} onClose={() => setAddDebtModalOpen(false)} onAdd={addDebt} />
     <EditProfileModal isOpen={isEditProfileModalOpen} onClose={() => setEditProfileModalOpen(false)} t={t} />
     <AvatarSelectionModal isOpen={isAvatarModalOpen} onClose={() => setAvatarModalOpen(false)} onSelect={handleAvatarSelect} t={t} />
+    <EditGoalModal isOpen={!!editingGoal} onClose={() => setEditingGoal(null)} goal={editingGoal} onSave={updateGoal} />
+    <AddFundsToGoalModal isOpen={!!fundingGoal} onClose={() => setFundingGoal(null)} goal={fundingGoal} wallets={wallets} onAddFunds={addFundsToGoal} />
     </>
   );
 };
