@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useSettings } from '../../context/SettingsContext';
-import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, CalendarIcon } from '../../components/Icons';
+import { BriefcaseIcon, EditIcon, CogIcon, PlusIcon, ArrowUpIcon, ArrowDownIcon, CalendarIcon, CheckIcon, TrashIcon } from '../../components/Icons';
 import { formatDate } from '../../utils/helpers';
 import { Spinner } from '../../components/Spinner';
 import { Goal, Debt, Transaction } from '../../types';
@@ -186,7 +186,7 @@ const AddGoalModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
     );
 };
 
-const AddDebtModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: () => void; onAdd: (data: Omit<Debt, 'id' | 'dueDate'> & { dueDate?: Date }) => void; }) => {
+const AddDebtModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: () => void; onAdd: (data: Omit<Debt, 'id' | 'status' | 'dueDate'> & { dueDate?: Date }) => void; }) => {
     const { t } = useSettings();
     const [type, setType] = useState<'payable' | 'receivable'>('payable');
     const [person, setPerson] = useState('');
@@ -244,29 +244,48 @@ const AddDebtModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: ()
     );
 };
 
-const DebtItem = ({ debt }: { debt: Debt }) => {
+const DebtItem = ({ debt, onToggleStatus, onDelete }: { debt: Debt, onToggleStatus: (id: string, status: 'unpaid' | 'paid') => void, onDelete: (id: string) => void }) => {
     const { formatCurrency, language, t } = useSettings();
     const isPayable = debt.type === 'payable';
+    const isPaid = debt.status === 'paid';
+
     return (
-        <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-4">
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center ${isPayable ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-500'}`}>
+        <div className={`flex items-center justify-between py-3 transition-opacity ${isPaid ? 'opacity-50' : ''}`}>
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className={`w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center ${isPayable ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-500'}`}>
                     {isPayable ? <ArrowUpIcon className="w-5 h-5" /> : <ArrowDownIcon className="w-5 h-5" />}
                 </div>
-                <div>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100">{debt.person}</p>
+                <div className="min-w-0">
+                    <p className={`font-semibold text-gray-800 dark:text-gray-100 truncate ${isPaid ? 'line-through' : ''}`}>{debt.person}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{isPayable ? t('payable') : t('receivable')}</p>
                 </div>
             </div>
-            <div>
-                <p className={`font-bold text-right ${isPayable ? 'text-red-500' : 'text-green-500'}`}>
-                    {formatCurrency(debt.amount)}
-                </p>
-                {debt.dueDate && <p className="text-xs text-gray-500 dark:text-gray-400 text-right">{t('dueDateOptional')}: {formatDate(debt.dueDate, language)}</p>}
+            <div className="flex items-center gap-1 sm:gap-2">
+                 <div className="text-right">
+                    <p className={`font-bold ${isPayable ? 'text-red-500' : 'text-green-500'} ${isPaid ? 'line-through' : ''}`}>
+                        {formatCurrency(debt.amount)}
+                    </p>
+                    {debt.dueDate && <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(debt.dueDate, language)}</p>}
+                </div>
+                <button 
+                    onClick={() => onToggleStatus(debt.id, debt.status)} 
+                    className={`p-2 rounded-full transition-colors ${isPaid ? 'text-green-500 hover:bg-green-100 dark:hover:bg-green-500/20' : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                    aria-label={isPaid ? t('markAsUnpaid') : t('markAsPaid')}
+                >
+                    <CheckIcon className="w-5 h-5"/>
+                </button>
+                <button 
+                    onClick={() => onDelete(debt.id)} 
+                    className="p-2 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-500/20 transition-colors"
+                    aria-label={t('deleteDebt')}
+                >
+                    <TrashIcon className="w-5 h-5"/>
+                </button>
             </div>
         </div>
     );
 };
+
 
 // --- In-file Component: Bar Chart for expenses ---
 const Bar = ({ value, maxValue, label, formatCurrency }: { value: number; maxValue: number; label: string; formatCurrency: (v: number) => string }) => {
@@ -400,7 +419,7 @@ const FinancialChart = ({ transactions }: { transactions: Transaction[] }) => {
 
 const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void }) => {
   const { userProfile, updateUserProfile } = useAuth();
-  const { wallets, goals, debts, addGoal, addDebt, transactions } = useData();
+  const { wallets, goals, debts, addGoal, addDebt, transactions, toggleDebtStatus, deleteDebt } = useData();
   const { t, formatCurrency } = useSettings();
   const [isAddGoalModalOpen, setAddGoalModalOpen] = useState(false);
   const [isAddDebtModalOpen, setAddDebtModalOpen] = useState(false);
@@ -424,6 +443,23 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
         setIsUpdatingAvatar(false);
     }
   };
+
+    const handleToggleDebtStatus = (debtId: string, currentStatus: 'unpaid' | 'paid') => {
+        toggleDebtStatus(debtId, currentStatus);
+    };
+
+    const handleDeleteDebt = (debtId: string) => {
+        if (window.confirm(t('confirmDeleteDebt'))) {
+            deleteDebt(debtId);
+        }
+    };
+
+    const sortedDebts = useMemo(() => {
+        return [...debts].sort((a, b) => {
+            if (a.status === b.status) return 0;
+            return a.status === 'paid' ? 1 : -1; // Unpaid first
+        });
+    }, [debts]);
 
   const totalBalance = wallets.reduce((acc, w) => acc + w.balance, 0);
   const targetProgress = goals.reduce((acc, g) => acc + g.currentAmount, 0);
@@ -537,8 +573,8 @@ const Profile = ({ onNavigateToSettings }: { onNavigateToSettings: () => void })
       <section>
         <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-2">{t('debtDetails')}</h3>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 divide-y divide-gray-100 dark:divide-gray-700 shadow-sm">
-            {debts.length > 0 ? (
-                debts.map(d => <DebtItem key={d.id} debt={d} />)
+            {sortedDebts.length > 0 ? (
+                sortedDebts.map(d => <DebtItem key={d.id} debt={d} onToggleStatus={handleToggleDebtStatus} onDelete={handleDeleteDebt} />)
             ) : (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">{t('noDebtRecords')}</p>
             )}
