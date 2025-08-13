@@ -4,13 +4,13 @@ import 'firebase/compat/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDFDBT4_KMICywty7lJjYime7T4ltxvwnc",
-  authDomain: "evvofinance-b6de9.firebaseapp.com",
-  projectId: "evvofinance-b6de9",
-  storageBucket: "evvofinance-b6de9.firebasestorage.app",
-  messagingSenderId: "852276651931",
-  appId: "1:852276651931:web:01fedb727347ecb0a6233e",
-  measurementId: "G-LNKCNJPBDK"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
